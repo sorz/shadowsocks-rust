@@ -181,7 +181,7 @@ pub fn run(config: Arc<Config>) -> impl Future<Item = (), Error = io::Error> + S
 
             info!("ShadowSocks TCP Listening on {}", addr);
 
-            if cfg!(target_os = "linux") { // TODO: add switch
+            if cfg!(target_os = "linux") && config.enable_tfo {
                 let qlen: c_int = 32;
                 let ret = unsafe {
                     setsockopt(
@@ -193,7 +193,7 @@ pub fn run(config: Arc<Config>) -> impl Future<Item = (), Error = io::Error> + S
                     )
                 };
                 if ret == 0 {
-                    info!("TCP Fast Open is activated");
+                    info!("TCP Fast Open is enabled");
                 } else {
                     warn!("Failed to enable TCP Fast Open: {}", io::Error::last_os_error());
                 }

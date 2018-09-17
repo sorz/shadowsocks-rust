@@ -465,6 +465,7 @@ pub struct Config {
     pub enable_udp: bool,
     pub forbidden_ip: HashSet<IpAddr>,
     pub dns: SocketAddr,
+    pub enable_tfo: bool,
 }
 
 impl Default for Config {
@@ -540,7 +541,8 @@ impl Config {
                  local: None,
                  enable_udp: false,
                  forbidden_ip: HashSet::new(),
-                 dns: "8.8.8.8:53".parse::<SocketAddr>().unwrap(), }
+                 dns: "8.8.8.8:53".parse::<SocketAddr>().unwrap(),
+                 enable_tfo: false, }
     }
 
     fn parse_server(server: &Map<String, Value>, default_timeout: Option<Duration>) -> Result<ServerConfig, Error> {

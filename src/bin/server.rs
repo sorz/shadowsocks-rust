@@ -60,7 +60,7 @@ fn log_time_module(fmt: &mut Formatter, without_time: bool, record: &Record) -> 
 }
 
 fn main() {
-    let matches = App::new("shadowsocks").version(shadowsocks::VERSION)
+    let mut app = App::new("shadowsocks").version(shadowsocks::VERSION)
                                          .about("A fast tunnel proxy that helps you bypass firewalls.")
                                          .arg(Arg::with_name("VERBOSE").short("v")
                                                                        .multiple(true)
@@ -91,8 +91,12 @@ fn main() {
                                                                           .takes_value(true)
                                                                           .help("Set SIP003 plugin options"))
                                          .arg(Arg::with_name("LOG_WITHOUT_TIME").long("log-without-time")
-                                                                                .help("Disable time in log"))
-                                         .get_matches();
+                                                                                .help("Disable time in log"));
+    if cfg!(target_os = "linux") {
+        app = app.arg(Arg::with_name("ENABLE_TFO").long("enable-tfo")
+                                                 .help("Enable TCP Fast Open"));
+    }
+    let matches = app.get_matches();
 
     let mut log_builder = Builder::new();
     log_builder.filter(None, LevelFilter::Info);
@@ -181,6 +185,7 @@ fn main() {
     }
 
     config.enable_udp |= matches.is_present("ENABLE_UDP");
+    config.enable_tfo |= matches.is_present("ENABLE_TFO");
 
     if let Some(p) = matches.value_of("PLUGIN") {
         let plugin = PluginConfig { plugin: p.to_owned(),
