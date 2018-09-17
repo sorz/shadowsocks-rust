@@ -3,6 +3,7 @@
 use std::io::{self, ErrorKind};
 use std::sync::Arc;
 use std::time::Duration;
+use std::mem;
 
 use config::{Config, ServerConfig};
 
@@ -19,6 +20,11 @@ use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_io::io::{ReadHalf, WriteHalf};
 use tokio_io::AsyncRead;
+
+#[cfg(target_os="linux")]
+use libc::{c_int, c_void, socklen_t, setsockopt, SOL_TCP, TCP_FASTOPEN};
+#[cfg(target_os="linux")]
+use std::os::unix::io::AsRawFd;
 
 use super::{proxy_handshake, try_timeout, tunnel, DecryptedHalf, EncryptedHalfFut, TcpStreamConnect};
 
@@ -174,6 +180,25 @@ pub fn run(config: Arc<Config>) -> impl Future<Item = (), Error = io::Error> + S
             let listener = TcpListener::bind(&addr).unwrap_or_else(|err| panic!("Failed to listen, {}", err));
 
             info!("ShadowSocks TCP Listening on {}", addr);
+
+            if cfg!(target_os = "linux") { // TODO: add switch
+                let qlen: c_int = 32;
+                let ret = unsafe {
+                    setsockopt(
+                        listener.as_raw_fd(),
+                        SOL_TCP,
+                        TCP_FASTOPEN,
+                        &qlen as *const _ as *const c_void,
+                        mem::size_of_val(&qlen) as socklen_t,
+                    )
+                };
+                if ret == 0 {
+                    info!("TCP Fast Open is activated");
+                } else {
+                    warn!("Failed to enable TCP Fast Open: {}", io::Error::last_os_error());
+                }
+            }
+
             listener
         };
 
